@@ -1,7 +1,9 @@
 const {
   VITE_BEARER_TOKEN: BEARER_TOKEN,
   VITE_LIMIT: LIMIT,
-  VITE_USER_AGENT: USER_AGENT
+  VITE_USER_AGENT: USER_AGENT,
+  VITE_API_URL: API_URL ,
+  
 } = import.meta.env
 
 const delay = (ms) => {
@@ -17,7 +19,7 @@ export default class ProductService {
 
     while (keepFetching) {
       try {
-        const response = await fetch(`/api/products?page=${page}&limit=${LIMIT}`, {
+        const response = await fetch(`${API_URL}/products?page=${page}&limit=${LIMIT}`, {
           method: 'GET',
           headers: {
             'Authentication': `bearer ${BEARER_TOKEN}`,
