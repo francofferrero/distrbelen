@@ -67,8 +67,8 @@ export default class ProductService {
     let keepFetching = true
 
     while (keepFetching) {
-      try {
-        const response = await fetch(`/api/categories?page=${page}&limit=${LIMIT}`, {
+      try {        
+          const response = await fetch(`${API_URL}/categories?page=${page}&limit=${LIMIT}`, {        
           method: 'GET',
           headers: {
             'Authentication': `bearer ${BEARER_TOKEN}`,
