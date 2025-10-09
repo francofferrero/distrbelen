@@ -2,16 +2,13 @@ const {
   VITE_BEARER_TOKEN: BEARER_TOKEN,
   VITE_LIMIT: LIMIT,
   VITE_USER_AGENT: USER_AGENT,
-  VITE_API_URL: API_URL ,
-  
+  VITE_API_URL: API_URL,
 } = import.meta.env
 
-const delay = (ms) => {
-  return new Promise(resolve => setTimeout(resolve, ms))
-}
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 
 export default class ProductService {
-
+  
   async getProducts() {
     const products = []
     let page = 1
@@ -27,6 +24,12 @@ export default class ProductService {
           },
         })
 
+        if (response.status === 404) {
+          console.warn(`⚠️ Página ${page} no encontrada (404). Finalizando búsqueda de productos.`)
+          keepFetching = false
+          break
+        }
+
         if (!response.ok) {
           throw new Error(`Error HTTP: ${response.status}`)
         }
@@ -34,7 +37,7 @@ export default class ProductService {
         const productsTiendaNube = await response.json()
 
         if (!Array.isArray(productsTiendaNube) || productsTiendaNube.length === 0) {
-          keepFetching = false          
+          keepFetching = false
         } else {
           products.push(...productsTiendaNube)
 
@@ -42,19 +45,22 @@ export default class ProductService {
             keepFetching = false
           } else {
             page++
-            await delay(150) // pequeña pausa entre llamadas
+            await delay(150)
           }
         }
       } catch (err) {
-        console.error(`Fallo al cargar la página ${page}:`, err)
+        console.error(`❌ Fallo al cargar la página ${page}:`, err)
         
-        // Decisión de manejo de error:
-        // Si el error es recuperable (ej. 429 Too Many Requests), intenta de nuevo.
-        // Si es un error grave (ej. 401 Unauthorized), deberías lanzar el error o cortar.
-        // Aquí asumimos que es un error temporal y hacemos una pausa antes de continuar
-        // a la siguiente página para evitar loops infinitos en una página errónea.
-        page++ // Avanza a la siguiente página después del error
-        await delay(1000) // espera más si hubo error (por ej. 429)
+        // Si el error es 404, cortamos el bucle
+        if (err.message.includes('404')) {
+          console.warn(`Deteniendo fetch: recurso no encontrado en la página ${page}.`)
+          keepFetching = false
+          break
+        }
+
+        // Otros errores (ej. 429 o 500) → intentar continuar
+        page++
+        await delay(1000)
       }
     }
 
@@ -67,8 +73,8 @@ export default class ProductService {
     let keepFetching = true
 
     while (keepFetching) {
-      try {        
-          const response = await fetch(`${API_URL}/categories?page=${page}&limit=${LIMIT}`, {        
+      try {
+        const response = await fetch(`${API_URL}/categories?page=${page}&limit=${LIMIT}`, {
           method: 'GET',
           headers: {
             'Authentication': `bearer ${BEARER_TOKEN}`,
@@ -76,22 +82,39 @@ export default class ProductService {
           }
         })
 
+        if (response.status === 404) {
+          console.warn(`⚠️ Página ${page} de categorías no encontrada (404). Deteniendo fetch.`)
+          keepFetching = false
+          break
+        }
+
         if (!response.ok) {
           throw new Error(`Error HTTP: ${response.status}`)
         }
 
         const categoriesTiendaNube = await response.json()
 
-        categories = categories.concat(categoriesTiendaNube)
-
-        if (categoriesTiendaNube.length < LIMIT) {
+        if (!Array.isArray(categoriesTiendaNube) || categoriesTiendaNube.length === 0) {
           keepFetching = false
         } else {
-          page++
-          await delay(150); // Añadimos un pequeño delay por buenas prácticas de API
+          categories.push(...categoriesTiendaNube)
+
+          if (categoriesTiendaNube.length < LIMIT) {
+            keepFetching = false
+          } else {
+            page++
+            await delay(150)
+          }
         }
       } catch (err) {
-        console.error(`Fallo al cargar la página ${page} de categorías:`, err)
+        console.error(`❌ Fallo al cargar la página ${page} de categorías:`, err)
+
+        if (err.message.includes('404')) {
+          console.warn(`Deteniendo fetch de categorías: página ${page} no encontrada.`)
+          keepFetching = false
+          break
+        }
+
         page++
         await delay(1000)
       }
