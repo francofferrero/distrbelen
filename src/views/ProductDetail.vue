@@ -1,46 +1,71 @@
-<template>
-  <div class="p-d-flex p-flex-column p-ai-center">
-    <Card style="width: 90%; max-width: 700px; text-align: center;">
-      <img :src="product.image" alt="Imagen producto" class="product-img-detail"/>
-      <h2 class="p-mt-3">{{ product.title }}</h2>
-      <p>{{ product.longDescription }}</p>
-      <Button
-        label="Volver"
-        icon="pi pi-arrow-left"
-        class="p-button-text p-mt-3"
-        @click="$router.push('/')"
-      />
-    </Card>
-  </div>
-</template>
+<script setup>
+import { useRoute, useRouter } from 'vue-router'
+import { ref, onBeforeMount } from 'vue'
+import { useProductsStore } from '@/stores/products'
+import Panel from 'primevue/panel'
 
-<script>
-export default {
-  props: ['id'],
-  data() {
-    return {
-      product: {}
-    }
-  },
-  created() {
-    const allProducts = [
-      { id: 1, title: 'Producto 1', longDescription: 'Detalle producto 1', image: 'https://via.placeholder.com/600x400?text=Producto+1' },
-      { id: 2, title: 'Producto 2', longDescription: 'Detalle producto 2', image: 'https://via.placeholder.com/600x400?text=Producto+2' },
-      { id: 3, title: 'Producto 3', longDescription: 'Detalle producto 3', image: 'https://via.placeholder.com/600x400?text=Producto+3' },
-      { id: 4, title: 'Producto 4', longDescription: 'Detalle producto 4', image: 'https://via.placeholder.com/600x400?text=Producto+4' },
-      { id: 5, title: 'Producto 5', longDescription: 'Detalle producto 5', image: 'https://via.placeholder.com/600x400?text=Producto+5' },
-      { id: 6, title: 'Producto 6', longDescription: 'Detalle producto 6', image: 'https://via.placeholder.com/600x400?text=Producto+6' }
-    ]
-    this.product = allProducts.find(p => p.id === Number(this.id))
-  }
+const route = useRoute()
+const router = useRouter()
+
+const productsStore = useProductsStore()
+const product = ref(null)
+
+onBeforeMount(async () => {  
+  productsStore.getProductById(route.params.id)
+  product.value = productsStore.selectedProduct
+})
+
+const getCategoryNames = (product) => {
+  if (!product || !product.categories?.length) return []
+
+  const names = []
+
+  product.categories.forEach(cat => {    
+    const categoryName = cat.name?.es || cat.name || 'Sin nombre'
+    names.push(categoryName)
+  })
+
+  return names
 }
+
+const goBack = () => {
+  router.back()
+}
+
 </script>
 
-<style scoped>
-.product-img-detail {
-  width: 100%;
-  max-height: 300px;
-  object-fit: cover;
-  border-radius: 12px;
-}
-</style>
+<template>
+  <Panel>
+    <div
+      class="p-6 w-[90vw] max-w-screen-lg mx-auto bg-white rounded-xl shadow-md flex flex-col items-center"
+    >
+      <div v-if="product" class="flex flex-col items-center text-center w-full">
+        <img
+          :src="product.images?.[0]?.src"
+          alt="Product Image"
+          class="w-full max-h-[75vh] object-contain my-4"
+        />
+
+        <h2 class="text-2xl font-bold mb-4">{{ product.name?.es || product.name }}</h2>
+
+        <!-- Categorías -->
+        <ul class="mt-2 text-lg text-gray-600">
+          <li v-for="(catName, i) in getCategoryNames(product)" :key="i">
+            {{ catName }}
+          </li>
+        </ul>
+      </div>
+
+      <div v-else>
+        <p class="text-red-500">No se encontró el producto en memoria</p>
+      </div>
+
+      <button
+        @click="goBack"
+        class="mt-6 px-6 py-2 bg-blue-500 text-white rounded-lg shadow hover:bg-blue-600 transition"
+      >
+        Volver
+      </button>
+    </div>
+  </Panel>
+</template>
