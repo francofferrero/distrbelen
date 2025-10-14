@@ -13,7 +13,7 @@ const baseModel = [
   {
     label: 'Inicio',
     items: [
-      { label: 'Escritorio', icon: 'pi pi-fw pi-home', to: '/dashboard' },
+      // { label: 'Escritorio', icon: 'pi pi-fw pi-home', to: '/dashboard' },
       { label: 'Productos', icon: 'pi pi-fw pi-list', to: '/products' },
     ],
   },
