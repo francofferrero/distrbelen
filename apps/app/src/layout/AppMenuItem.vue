@@ -49,6 +49,13 @@ const itemClick = (event, item) => {
         return;
     }
 
+    if (item.items && item.items.length > 0) {
+        event.preventDefault()
+        const foundItemKey = isActiveMenu.value ? props.parentItemKey : itemKey
+        setActiveMenuItem(foundItemKey)
+        return
+    }
+    
     if ((item.to || item.url) && (layoutState.staticMenuMobileActive || layoutState.overlayMenuActive)) {
         onMenuToggle();
     }
