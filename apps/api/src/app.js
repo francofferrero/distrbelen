@@ -7,8 +7,13 @@ import cors from 'cors'
 dotenv.config()
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms))
+const {
+  API_KEY,
+  USER_AGENT,
+  API_URL,
+} = process.env
 
-const { API_KEY, USER_AGENT, API_URL, LIMIT, PORT = 3030 } = process.env
+const LIMIT = 30
 
 const instance = axios.create({
   baseURL: API_URL,
@@ -58,7 +63,7 @@ app.get('/products', async (req, res) => {
 
     res.send({ count: totalCount, products })
   } catch (err) {
-    console.error('❌ Error general al cargar productos:', err.message)
+    console.error('❌ Error al cargar productos:', err.message)
     res.status(500).send({ error: 'Error al cargar productos', details: err.message })
   }
 })
@@ -84,7 +89,7 @@ app.get('/categories', async (req, res) => {
 
     res.send({ count: totalCount, categories })
   } catch (err) {
-    console.error('❌ Error general al cargar categorías:', err.message)
+    console.error('❌ Error al cargar categorías:', err.message)
     res.status(500).send({ error: 'Error al cargar categorías', details: err.message })
   }
 })
@@ -168,9 +173,13 @@ app.get('/test', async (req, res) => {
   }
 })
 
-// --- Servidor ---
-app.listen(PORT, () => {
-  console.log(`\x1b[36mAPI ready on http://localhost:${PORT}\x1b[0m`)
-})
+
+// For local development
+if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`\x1b[36mAPI ready on http://localhost:${PORT}\x1b[0m`)
+  })
+}
 
 export default app

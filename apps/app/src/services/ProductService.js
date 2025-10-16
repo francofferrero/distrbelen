@@ -1,11 +1,7 @@
 export default class ProductService {
 
   constructor() {
-    const isProd = import.meta.env.PROD
-    const localURL = import.meta.env.VITE_LOCAL_API_URL
-    const prodURL = import.meta.env.VITE_PROD_API_URL
-
-    this.baseURL = isProd ? prodURL : localURL
+    this.baseURL = import.meta.env.VITE_API_URL
   }
 
   async getProducts() {

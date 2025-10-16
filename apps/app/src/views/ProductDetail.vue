@@ -10,7 +10,7 @@ const router = useRouter()
 const productsStore = useProductsStore()
 const product = ref(null)
 
-onBeforeMount(async () => {  
+onBeforeMount(async () => {
   productsStore.getProductById(route.params.id)
   product.value = productsStore.selectedProduct
 })
@@ -18,11 +18,8 @@ onBeforeMount(async () => {
 const getCategoryNames = (product) => {
   if (!product || !product.categories?.length) return []
 
-  const names = []
-
-  product.categories.forEach(cat => {    
-    const categoryName = cat.name?.es || cat.name || 'Sin nombre'
-    names.push(categoryName)
+  const names = product.categories.map((category) => {
+    return category.name?.es || category.name || 'Categoría sin nombre'
   })
 
   return names
@@ -50,7 +47,7 @@ const goBack = () => {
 
         <!-- Categorías -->
         <ul class="mt-2 text-lg text-gray-600">
-          <li v-for="(catName, i) in getCategoryNames(product)" :key="i">
+          <li v-for="(catName, i) in getCategoryNames(product)" :key="`category-${i}`">
             {{ catName }}
           </li>
         </ul>

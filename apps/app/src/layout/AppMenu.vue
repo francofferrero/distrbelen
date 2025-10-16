@@ -13,13 +13,12 @@ const baseModel = [
   {
     label: 'Inicio',
     items: [
-      // { label: 'Escritorio', icon: 'pi pi-fw pi-home', to: '/dashboard' },
       { label: 'Productos', icon: 'pi pi-fw pi-list', to: '/products' },
     ],
   },
 ]
 
-// 🔑 función recursiva: arma un item de menú, pero guarda también todos los IDs descendientes en "allIds"
+// función recursiva: arma un item de menú, pero guarda también todos los IDs descendientes en "allIds"
 function mapCategory(cat, allCategories) {
   let allIds = [cat.id]
 
@@ -40,7 +39,7 @@ function mapCategory(cat, allCategories) {
     icon: 'pi pi-fw pi-tag',
     to: `/category/${cat.id}`,
     items,
-    allIds, // 🔑 agregamos propiedad con todos los IDs que incluye esta categoría
+    allIds, // agregamos propiedad con todos los IDs que incluye esta categoría
   }
 }
 
