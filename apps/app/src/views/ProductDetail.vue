@@ -1,8 +1,8 @@
 <script setup>
 import { useRoute, useRouter } from 'vue-router'
-import { ref, onBeforeMount } from 'vue'
+import { ref, onBeforeMount, computed, onMounted, onUnmounted } from 'vue'
 import { useProductsStore } from '@/stores/products'
-import Panel from 'primevue/panel'
+import Galleria from 'primevue/galleria'
 
 const route = useRoute()
 const router = useRouter()
@@ -10,59 +10,112 @@ const router = useRouter()
 const productsStore = useProductsStore()
 const product = ref(null)
 
+// Detectar ancho de pantalla para definir altura dinámica
+const windowWidth = ref(window.innerWidth)
+
+const updateWidth = () => {
+  windowWidth.value = window.innerWidth
+}
+
+onMounted(() => {
+  window.addEventListener('resize', updateWidth)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', updateWidth)
+})
+
+// Altura dinámica del contenedor según tamaño de pantalla
+const galleryHeightClass = computed(() => {
+  return windowWidth.value < 768 ? 'max-h-[50vh]' : 'max-h-[80vh]'
+})
+
 onBeforeMount(async () => {
   productsStore.getProductById(route.params.id)
   product.value = productsStore.selectedProduct
 })
 
-const getCategoryNames = (product) => {
-  if (!product || !product.categories?.length) return []
+const galleryImages = computed(() => {
+  if (!product.value?.images?.length) return []
+  return product.value.images.map(img => ({
+    itemImageSrc: img.src,
+    alt: img.alt || 'Imagen de producto'
+  }))
+})
 
-  const names = product.categories.map((category) => {
-    return category.name?.es || category.name || 'Categoría sin nombre'
-  })
+const categoryNames = computed(() =>
+  !product.value?.categories?.length
+    ? []
+    : product.value.categories.map(c => c.name?.es || c.name || 'Categoría sin nombre')
+)
 
-  return names
-}
-
-const goBack = () => {
-  router.back()
-}
-
+const goBack = () => router.back()
 </script>
 
 <template>
-  <Panel>
-    <div
-      class="p-6 w-[90vw] max-w-screen-lg mx-auto bg-white rounded-xl shadow-md flex flex-col items-center"
-    >
-      <div v-if="product" class="flex flex-col items-center text-center w-full">
-        <img
-          :src="product.images?.[0]?.src"
-          alt="Product Image"
-          class="w-full max-h-[75vh] object-contain my-4"
-        />
+  <div>
+    <div v-if="product">
+      <div class="grid grid-cols-12 gap-4 flex items-center">
+        <div class="col-span-8 relative">
+          <!-- Botón volver superpuesto -->
+          <button
+            @click="goBack"
+            class="absolute top-4 left-4 z-10 bg-black/50 text-white px-3 py-1 rounded-md hover:bg-black/70 transition-colors"
+          >
+            ← Volver
+          </button>
 
-        <h2 class="text-2xl font-bold mb-4">{{ product.name?.es || product.name }}</h2>
+          <!-- Galería -->
+          <div v-if="galleryImages.length" class="w-full my-4 relative">
+            <Galleria
+              :value="galleryImages"
+              :numVisible="1"
+              containerStyle="width: 100%; height: 100%"
+              :showThumbnails="false"
+              :showIndicators="true"
+              :circular="true"
+            >
+              <template #item="slotProps">
+                <div
+                  class="flex items-center justify-center w-full"
+                  :class="galleryHeightClass"
+                >
+                  <img
+                    :src="slotProps.item.itemImageSrc"
+                    :alt="slotProps.item.alt"
+                    class="max-w-full max-h-full object-contain"
+                  />
+                </div>
+              </template>
+            </Galleria>
+          </div>
 
-        <!-- Categorías -->
-        <ul class="mt-2 text-lg text-gray-600">
-          <li v-for="(catName, i) in getCategoryNames(product)" :key="`category-${i}`">
-            {{ catName }}
-          </li>
-        </ul>
+          <p v-else class="text-gray-500 my-4">
+            Producto sin imágenes disponibles.
+          </p>
+        </div>
+
+        <!-- Detalles -->
+        <div class="col-span-4 my-4 flex flex-col items-center text-center">
+          <h2 class="text-2xl font-bold mb-4">
+            {{ product.name?.es || product.name }}
+          </h2>
+          <ul class="mt-2 text-lg text-gray-600">
+            <li
+              v-for="(catName, i) in categoryNames"
+              :key="`category-${i}`"
+            >
+              {{ catName }}
+            </li>
+          </ul>
+        </div>
       </div>
-
-      <div v-else>
-        <p class="text-red-500">No se encontró el producto en memoria</p>
-      </div>
-
-      <button
-        @click="goBack"
-        class="mt-6 px-6 py-2 bg-blue-500 text-white rounded-lg shadow hover:bg-blue-600 transition"
-      >
-        Volver
-      </button>
     </div>
-  </Panel>
+
+    <div v-else>
+      <p class="text-red-500">
+        No se encontró el producto
+      </p>
+    </div>
+  </div>
 </template>

@@ -1,11 +1,11 @@
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { computed, watch, ref } from 'vue'
 import { useProductsStore } from '@/stores/products'
 import { useRouter, useRoute } from 'vue-router'
 import ProgressSpinner from 'primevue/progressspinner'
-import Paginator from 'primevue/paginator'
 import Panel from 'primevue/panel'
 
+// --- Stores & router ---
 const productsStore = useProductsStore()
 const router = useRouter()
 const route = useRoute()
@@ -14,28 +14,23 @@ const route = useRoute()
 const loading = computed(() => productsStore.loading)
 const error = computed(() => productsStore.error)
 const products = computed(() => productsStore.products)
-const categories = computed(() => productsStore.categories) // 🔹 más limpio acceder desde aquí
-const searchQuery = ref('')
+const categories = computed(() => productsStore.categories)
+const searchQuery = computed(() => productsStore.searchQuery)
 
-const rows = ref(9)
-const first = ref(0)
-const usePagination = ref(false) // 🔹 si querés activarlo luego, debe ser ref
 const categoryId = ref(route.params.id ? Number(route.params.id) : null)
 
-// --- Watch in URL ---
+// --- Watch route param ---
 watch(
   () => route.params.id,
   newId => {
     categoryId.value = newId ? Number(newId) : null
-    first.value = 0 // 🔹 reinicia paginación al cambiar categoría
-    searchQuery.value = '' // 🔹 limpia búsqueda al cambiar categoría
+    productsStore.searchQuery = ''
   }
 )
 
-// --- auxiliar functions ---
+// --- Aux functions for categories ---
 const mapCategoryForStore = (cat, allCategories) => {
   const allIds = [cat.id]
-
   if (cat.subcategories?.length) {
     const items = cat.subcategories
       .map(id => allCategories.find(c => c.id === id))
@@ -47,7 +42,6 @@ const mapCategoryForStore = (cat, allCategories) => {
       })
     return { ...cat, items, allIds }
   }
-
   return { ...cat, items: [], allIds }
 }
 
@@ -84,25 +78,17 @@ const filteredProducts = computed(() => {
   if (!q) return displayedProducts.value
 
   return displayedProducts.value.filter(p => {
-    const name = typeof p.name === 'object' ? p.name.es || '' : p.name || ''
+    let name = ''
+    if (p.name) {
+      if (typeof p.name === 'string') name = p.name
+      else if (typeof p.name === 'object' && p.name.es) name = p.name.es
+      else name = String(p.name) // fallback seguro
+    }
     return name.toLowerCase().includes(q)
   })
 })
 
-// --- Pagination ---
-const paginatedProducts = computed(() => {
-  if (!usePagination.value) return filteredProducts.value
-  const start = first.value
-  return filteredProducts.value.slice(start, start + rows.value)
-})
-
-const onPageChange = ({ first: f, rows: r }) => {
-  first.value = f
-  rows.value = r
-  window.scrollTo({ top: 0, behavior: 'smooth' })
-}
-
-// --- Category & navigation ---
+// --- Navigation ---
 const categoryName = computed(() => {
   if (!categoryId.value) return 'Productos'
   const cat = categories.value.find(c => c.id === categoryId.value)
@@ -112,22 +98,17 @@ const categoryName = computed(() => {
 const viewProduct = product => {
   router.push({ name: 'ProductDetail', params: { id: product.id } })
 }
-
-const clearSearch = () => {
-  searchQuery.value = ''
-}
 </script>
 
 <template>
   <div>
     <Panel>
-      
-      <!-- 🔄 Loading -->
+      <!-- Loading -->
       <div v-if="loading" class="flex justify-center mt-8">
         <ProgressSpinner style="width: 50px; height: 50px" strokeWidth="8" />
       </div>
 
-      <!-- ❌ Error -->
+      <!-- Error -->
       <div
         v-else-if="error"
         class="text-center text-red-600 font-semibold text-lg p-5 border border-red-300 bg-red-50 mt-4 rounded-lg"
@@ -136,30 +117,20 @@ const clearSearch = () => {
         {{ error }}
       </div>
 
-      <!-- ✅ Productos -->
+      <!-- Productos -->
       <div v-else>
-        <!-- Header: título + buscador -->
-        <div
-          class="mb-4 flex flex-col md:flex-row md:justify-between md:items-center gap-3"
-        >
+        <!-- Header: título -->
+        <div class="mb-4 flex flex-col md:flex-row md:justify-between md:items-center gap-3">
           <h1 class="text-2xl font-bold">{{ categoryName }}</h1>
-          <div class="relative w-full md:w-1/2 max-w-md">
-            <input
-              v-model="searchQuery"
-              type="text"
-              placeholder="Buscar producto..."
-              class="w-full p-2 border rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
-            />
-          </div>
         </div>
 
-        <!-- List -->
+        <!-- Lista de productos -->
         <div
-          v-if="paginatedProducts.length"
+          v-if="filteredProducts.length"
           class="grid grid-cols-2 md:grid-cols-3 gap-6"
         >
           <div
-            v-for="p in paginatedProducts"
+            v-for="p in filteredProducts"
             :key="p.id"
             class="p-4 border rounded shadow hover:shadow-lg transition cursor-pointer"
             @click="viewProduct(p)"
@@ -170,7 +141,7 @@ const clearSearch = () => {
               class="w-full h-40 object-contain mb-2"
             />
             <h2 class="font-semibold text-lg truncate">
-              {{ typeof p.name === 'object' ? p.name.es : p.name }}
+              {{ p.name?.es || p.name }}
             </h2>
           </div>
         </div>
@@ -179,21 +150,7 @@ const clearSearch = () => {
         <div v-else class="text-gray-500 text-center py-6">
           No hay productos que coincidan con la búsqueda.
         </div>
-
-        <!-- Pager -->
-        <div
-          v-if="usePagination && filteredProducts.length > rows"
-          class="mt-6 flex justify-center"
-        >
-          <Paginator
-            :rows="rows"
-            :totalRecords="filteredProducts.length"
-            :first="first"
-            @page="onPageChange"
-            :rowsPerPageOptions="[9, 18, 36]"
-          />
-        </div>
-      </div>      
+      </div>
     </Panel>
   </div>
 </template>
